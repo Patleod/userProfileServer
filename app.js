@@ -9,6 +9,7 @@ var N1qlQuery = Couchbase.N1qlQuery;
  
 app.use(BodyParser.json());
 app.use(BodyParser.urlencoded({ extended: true }));
+app.use(Cors());
  
 var cluster = new Couchbase.Cluster("couchbase://localhost");
 var bucket = cluster.openBucket("default", "");
