@@ -1,19 +1,23 @@
-var Couchbase = require("couchbase");
+//var Couchbase = require("couchbase");
+var mongo = require('./imports/mongoose');
+var api = require('./imports/api');
+var Cors = require("cors");
 var Express = require("express");
 var UUID = require("uuid");
 var BodyParser = require("body-parser");
 var Bcrypt = require("bcryptjs");
-var cors = require("cors");
-
-var app = Express();
-app.use(cors());
-var N1qlQuery = Couchbase.N1qlQuery;
  
+var app = Express();
+//var N1qlQuery = Couchbase.N1qlQuery;
+var connection = mongo.Connection;
+
 app.use(BodyParser.json());
 app.use(BodyParser.urlencoded({ extended: true }));
+app.use(Cors());
 
-var cluster = new Couchbase.Cluster("couchbase://localhost");
-var bucket = cluster.openBucket("default", "");
+
+//var cluster = new Couchbase.Cluster("couchbase://localhost");
+//var bucket = cluster.openBucket("default", "");
  
 var server = app.listen(3000, () => {
     console.log("Listening on port " + server.address().port + "...");
@@ -27,7 +31,7 @@ app.post("/account", (request, response) => {
     }
     var id = UUID.v4();
     var account = {
-        "type": "account",
+        //"type": "account",
         "pid": id,
         "email": request.body.email,
         "password": Bcrypt.hashSync(request.body.password, 10)
@@ -35,13 +39,13 @@ app.post("/account", (request, response) => {
     var profile = request.body;
     profile.type = "profile";
     delete profile.password;
-    bucket.insert(id, profile, (error, result) => {
+    api.profile.create(id, profile, response, (error, result) => {
         if(error) {
             return response.status(500).send(error);
         }
-        bucket.insert(request.body.email, account, (error, result) => {
+        api.profile.create(request.body.email, profile, (error, result) => {
             if(error) {
-                bucket.remove(id);
+                api.account.delete(id);
                 return response.status(500).send(error);
             }
             response.send(result);
@@ -55,7 +59,8 @@ app.post("/login", (request, response) => {
     } else if(!request.body.password) {
         return response.status(401).send({ "message": "A `password` is required" });
     }
-    bucket.get(request.body.email, (error, result) => {
+    //bucket.get(request.body.email, (error, result) => {
+    api.account.get(request.body.email, response, (error, result) => {
         if(error) {
             return response.status(500).send(error);
         }
@@ -135,4 +140,5 @@ app.get("/blogs", validate, (request, response) => {
         response.send(result);
     });
 });
+
 
